@@ -4,7 +4,7 @@
   "description": "Backend for Employee Workload Management System",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "nodemon server.js",
     "dev": "nodemon server.js",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all"
@@ -12,7 +12,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^16.3.1",
     "express": "^4.22.1",
     "jsonwebtoken": "^9.0.2",
@@ -21,7 +21,7 @@
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
+    "nodemon": "^3.1.11",
     "sequelize-cli": "^6.6.2"
   },
   "keywords": [
