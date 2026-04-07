@@ -29,7 +29,7 @@ const Task = sequelize.define('Task', {
   },
   assignedTo: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   assignedBy: {
     type: DataTypes.INTEGER,

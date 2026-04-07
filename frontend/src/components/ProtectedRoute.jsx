@@ -4,9 +4,11 @@ import { useAuth } from '../utils/auth';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
+  const normalizedUserRole = user?.role?.toLowerCase?.().trim?.() || '';
+  const normalizedAllowedRoles = allowedRoles.map((role) => role.toLowerCase().trim());
 
   if (!user) return <Navigate to="/login" />;
-  if (!allowedRoles.includes(user.role)) return <Navigate to="/unauthorized" />;
+  if (!normalizedAllowedRoles.includes(normalizedUserRole)) return <Navigate to="/unauthorized" />;
 
   return children;
 };

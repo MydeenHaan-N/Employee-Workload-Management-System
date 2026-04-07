@@ -29,7 +29,7 @@ module.exports = {
       },
       assignedTo: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: true
       },
       assignedBy: {
         type: Sequelize.INTEGER,

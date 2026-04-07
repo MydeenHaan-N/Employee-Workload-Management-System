@@ -1,5 +1,4 @@
 const { Task, User } = require('../models/index');
-const { Op } = require('sequelize');
 
 const createTask = async (req, res) => {
   const { title, description, priority, deadline, assignedTo } = req.body;
@@ -8,17 +7,25 @@ const createTask = async (req, res) => {
   if (req.user.role !== 'manager') return res.status(403).json({ message: 'Access denied' });
 
   try {
-    const employee = await User.findByPk(assignedTo);
-    if (!employee || employee.role !== 'employee' || employee.managerId !== assignedBy) {
-      return res.status(400).json({ message: 'Invalid employee or not under you' });
+    let nextAssignedTo = null;
+
+    if (assignedTo) {
+      const employee = await User.findByPk(assignedTo);
+      if (!employee || employee.role !== 'employee' || employee.managerId !== assignedBy) {
+        return res.status(400).json({ message: 'Invalid employee or not under you' });
+      }
+
+      nextAssignedTo = assignedTo;
     }
 
-    const activeTasks = await Task.count({
-      where: { assignedTo, status: { [Op.notIn]: ['Completed', 'Overdue'] } },
+    const task = await Task.create({
+      title,
+      description,
+      priority,
+      deadline,
+      assignedTo: nextAssignedTo,
+      assignedBy,
     });
-    if (activeTasks >= 5) return res.status(400).json({ message: 'Max active tasks reached' });
-
-    const task = await Task.create({ title, description, priority, deadline, assignedTo, assignedBy });
     res.status(201).json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });

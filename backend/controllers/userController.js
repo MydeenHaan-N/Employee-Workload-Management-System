@@ -9,7 +9,7 @@ const getRoleByName = (name) => Role.findOne({
 });
 
 const createUser = async (req, res) => {
-  const { fullName, email, password, role, managerId } = req.body;
+  const { fullName, email, password, role } = req.body;
   const { role: creatorRole } = req.user;
 
   try {
@@ -23,18 +23,6 @@ const createUser = async (req, res) => {
     }
 
     const normalizedRole = roleRecord.name;
-    let finalManagerId = managerId || null;
-
-    if (normalizedRole === 'employee' && managerId) {
-      const manager = await User.findByPk(managerId);
-      if (!manager || manager.role !== 'manager') {
-        return res.status(400).json({ message: 'Invalid manager ID' });
-      }
-      finalManagerId = managerId;
-    } else if (normalizedRole !== 'employee') {
-      finalManagerId = null;
-    }
-
     const passwordHash = bcrypt.hashSync(password, 10);
     const user = await User.create({
       fullName,
@@ -42,7 +30,7 @@ const createUser = async (req, res) => {
       passwordHash,
       role: normalizedRole,
       roleId: roleRecord.id,
-      managerId: finalManagerId,
+      managerId: null,
     });
 
     res.status(201).json(user);
@@ -61,7 +49,7 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { fullName, role, managerId } = req.body; // password update separate if needed
+  const { fullName, role } = req.body; // password update separate if needed
   const { role: requesterRole } = req.user;
 
   try {
@@ -74,7 +62,7 @@ const updateUser = async (req, res) => {
 
     let nextRole = user.role;
     let nextRoleId = user.roleId;
-    let nextManagerId = typeof managerId === 'undefined' ? user.managerId : managerId || null;
+    let nextManagerId = user.managerId;
 
     if (role) {
       const roleRecord = await getRoleByName(role);
@@ -84,13 +72,6 @@ const updateUser = async (req, res) => {
 
       nextRole = roleRecord.name;
       nextRoleId = roleRecord.id;
-    }
-
-    if (nextRole === 'employee' && nextManagerId) {
-      const manager = await User.findByPk(nextManagerId);
-      if (!manager || manager.role !== 'manager') {
-        return res.status(400).json({ message: 'Invalid manager ID' });
-      }
     }
 
     if (nextRole !== 'employee') {
@@ -206,6 +187,75 @@ const getMyTeam = async (req, res) => {
   }
 };
 
+const getAvailableEmployees = async (req, res) => {
+  if (req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  try {
+    const employees = await User.findAll({
+      where: {
+        role: 'employee',
+        managerId: null,
+      },
+      include: [{ model: Role, as: 'roleDetails', attributes: ['id', 'name'] }],
+      order: [['fullName', 'ASC']],
+    });
+
+    res.json(employees);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const claimEmployee = async (req, res) => {
+  if (req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  try {
+    const employee = await User.findByPk(req.params.id);
+    if (!employee || employee.role !== 'employee') {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    if (employee.managerId && employee.managerId !== req.user.id) {
+      return res.status(409).json({ message: 'Employee is already assigned to another manager' });
+    }
+
+    if (employee.managerId === req.user.id) {
+      return res.json(employee);
+    }
+
+    await employee.update({ managerId: req.user.id });
+    res.json(employee);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const releaseEmployee = async (req, res) => {
+  if (req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  try {
+    const employee = await User.findByPk(req.params.id);
+    if (!employee || employee.role !== 'employee') {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    if (employee.managerId !== req.user.id) {
+      return res.status(403).json({ message: 'You can only release employees assigned to you' });
+    }
+
+    await employee.update({ managerId: null });
+    res.json(employee);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   createUser,
   updateUser,
@@ -213,4 +263,7 @@ module.exports = {
   getMe,
   getAllUsers,
   getMyTeam,
+  getAvailableEmployees,
+  claimEmployee,
+  releaseEmployee,
 };

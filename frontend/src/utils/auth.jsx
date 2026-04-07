@@ -8,6 +8,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();   // helps with auto-redirect on invalid/expired token
 
+  const normalizeDecodedUser = (decoded) => ({
+    ...decoded,
+    role: decoded?.role?.toLowerCase?.().trim?.() || '',
+  });
+
   // 1. Load token from localStorage when app starts / refreshes
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -25,7 +30,7 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        setUser(decoded);
+        setUser(normalizeDecodedUser(decoded));
         // Optional: auto-redirect to dashboard based on role if on /login
         // if (window.location.pathname === '/login') {
         //   navigate(`/${decoded.role}`);
@@ -42,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', token);
     try {
       const decoded = jwtDecode(token);
-      setUser(decoded);
+      setUser(normalizeDecodedUser(decoded));
 
       // Optional: immediate redirect after login
       // (some people prefer doing this in Login component)
