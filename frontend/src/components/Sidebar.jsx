@@ -4,6 +4,7 @@ import { useAuth } from '../utils/auth';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
+  const roleName = user?.roleName || user?.role || '';
 
   const menuItems = {
     admin: [
@@ -23,7 +24,7 @@ const Sidebar = () => {
   return (
     <aside className="bg-gray-200 p-4">
       <ul>
-        {menuItems[user?.role]?.map((item) => (
+        {menuItems[roleName]?.map((item) => (
           <li key={item.path}>
             <Link to={item.path}>{item.label}</Link>
           </li>

@@ -95,11 +95,20 @@ const EmployeeDashboard = () => {
       ),
     },
     {
+      header: 'Weight',
+      accessor: 'weight',
+      render: (task) => (
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
+          {task.weight ?? 1}
+        </span>
+      ),
+    },
+    {
       header: 'Due Date',
-      accessor: 'dueDate',
+      accessor: 'deadline',
       render: (task) => (
         <span className="text-sm text-gray-600">
-          {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No deadline'}
+          {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
         </span>
       ),
     },

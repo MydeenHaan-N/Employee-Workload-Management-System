@@ -1,16 +1,18 @@
-const bcrypt = require('bcrypt');
-const { User, Role, Task } = require('../models/index');
-const { Op } = require('sequelize');
+import bcrypt from 'bcrypt';
+import { Op } from 'sequelize';
+import { User, Role, Task, TaskAssignment } from '../models/index.js';
 
-const ACTIVE_TASK_STATUSES = ['Pending', 'In Progress'];
+const ACTIVE_TASK_STATUSES = ['Pending', 'In Progress', 'Overdue'];
 
 const getRoleByName = (name) => Role.findOne({
   where: { name: name?.toLowerCase().trim() },
 });
 
+const isRole = (req, roleName) => req.user.roleName === roleName;
+
 const createUser = async (req, res) => {
   const { fullName, email, password, role } = req.body;
-  const { role: creatorRole } = req.user;
+  const creatorRole = req.user.roleName;
 
   try {
     if (creatorRole !== 'admin') {
@@ -22,13 +24,11 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: 'Selected role does not exist' });
     }
 
-    const normalizedRole = roleRecord.name;
     const passwordHash = bcrypt.hashSync(password, 10);
     const user = await User.create({
       fullName,
       email,
       passwordHash,
-      role: normalizedRole,
       roleId: roleRecord.id,
       managerId: null,
     });
@@ -36,31 +36,35 @@ const createUser = async (req, res) => {
     res.status(201).json(user);
   } catch (err) {
     if (err.name === 'SequelizeValidationError') {
-      const errors = err.errors.map(e => e.message);
+      const errors = err.errors.map((error) => error.message);
       return res.status(400).json({ message: 'Validation failed', errors });
-    } else if (err.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ message: 'Email already exists' });
-    } else {
-      console.error(err);
-      res.status(500).json({ message: 'Server error' });
     }
+
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
 const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { fullName, role } = req.body; // password update separate if needed
-  const { role: requesterRole } = req.user;
+  const { fullName, role } = req.body;
+  const requesterRole = req.user.roleName;
 
   try {
-    const user = await User.findByPk(id);
+    const user = await User.findByPk(id, {
+      include: [{ model: Role, as: 'roleDetails', attributes: ['name'] }],
+    });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (requesterRole !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update users' });
     }
 
-    let nextRole = user.role;
+    let nextRole = user.roleDetails?.name;
     let nextRoleId = user.roleId;
     let nextManagerId = user.managerId;
 
@@ -80,7 +84,6 @@ const updateUser = async (req, res) => {
 
     await user.update({
       fullName: fullName ?? user.fullName,
-      role: nextRole,
       roleId: nextRoleId,
       managerId: nextManagerId,
     });
@@ -92,7 +95,8 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   const { id } = req.params;
-  const { role: requesterRole, id: requesterId } = req.user;
+  const requesterRole = req.user.roleName;
+  const requesterId = req.user.id;
 
   try {
     const user = await User.findByPk(id);
@@ -115,7 +119,9 @@ const deleteUser = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id, {
+      include: [{ model: Role, as: 'roleDetails', attributes: ['id', 'name', 'description'] }],
+    });
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -123,7 +129,7 @@ const getMe = async (req, res) => {
 };
 
 const getAllUsers = async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+  if (!isRole(req, 'admin')) return res.status(403).json({ message: 'Access denied' });
   try {
     const users = await User.findAll({
       include: [{ model: Role, as: 'roleDetails', attributes: ['id', 'name', 'description'] }],
@@ -136,49 +142,80 @@ const getAllUsers = async (req, res) => {
 };
 
 const getMyTeam = async (req, res) => {
-  if (req.user.role !== 'manager') {
+  if (!isRole(req, 'manager')) {
     return res.status(403).json({ message: 'Access denied' });
   }
 
   try {
+    const employeeRole = await getRoleByName('employee');
     const employees = await User.findAll({
       where: {
         managerId: req.user.id,
-        role: 'employee',
+        roleId: employeeRole?.id,
       },
       include: [{ model: Role, as: 'roleDetails', attributes: ['id', 'name'] }],
       order: [['fullName', 'ASC']],
     });
 
     const employeeIds = employees.map((employee) => employee.id);
-    const tasks = employeeIds.length > 0
-      ? await Task.findAll({
+    const assignments = employeeIds.length > 0
+      ? await TaskAssignment.findAll({
           where: {
-            assignedTo: { [Op.in]: employeeIds },
+            employeeId: { [Op.in]: employeeIds },
           },
-          attributes: ['assignedTo', 'status'],
+          attributes: ['employeeId', 'status', 'completionPercent', 'isActive'],
+          include: [{ model: Task, as: 'task', attributes: ['weight'] }],
         })
       : [];
 
     const workloadByEmployee = employeeIds.reduce((acc, id) => {
-      acc[id] = { total: 0, pending: 0, inProgress: 0, completed: 0, active: 0 };
+      acc[id] = {
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        overdue: 0,
+        active: 0,
+        totalWeight: 0,
+        activeWeight: 0,
+        remainingWeight: 0,
+      };
       return acc;
     }, {});
 
-    for (const task of tasks) {
-      const stats = workloadByEmployee[task.assignedTo];
+    for (const assignment of assignments) {
+      const stats = workloadByEmployee[assignment.employeeId];
       if (!stats) continue;
 
+      const weight = assignment.task?.weight ?? 1;
+      const remainingWeight = weight * (1 - ((assignment.completionPercent || 0) / 100));
+
       stats.total += 1;
-      if (task.status === 'Pending') stats.pending += 1;
-      if (task.status === 'In Progress') stats.inProgress += 1;
-      if (task.status === 'Completed') stats.completed += 1;
-      if (ACTIVE_TASK_STATUSES.includes(task.status)) stats.active += 1;
+      stats.totalWeight += weight;
+      if (assignment.status === 'Pending') stats.pending += 1;
+      if (assignment.status === 'In Progress') stats.inProgress += 1;
+      if (assignment.status === 'Completed') stats.completed += 1;
+      if (assignment.status === 'Overdue') stats.overdue += 1;
+      if (assignment.isActive && ACTIVE_TASK_STATUSES.includes(assignment.status)) {
+        stats.active += 1;
+        stats.activeWeight += weight;
+        stats.remainingWeight += remainingWeight;
+      }
     }
 
     const team = employees.map((employee) => ({
       ...employee.toJSON(),
-      workload: workloadByEmployee[employee.id] || { total: 0, pending: 0, inProgress: 0, completed: 0, active: 0 },
+      workload: workloadByEmployee[employee.id] || {
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        overdue: 0,
+        active: 0,
+        totalWeight: 0,
+        activeWeight: 0,
+        remainingWeight: 0,
+      },
     }));
 
     res.json(team);
@@ -188,14 +225,15 @@ const getMyTeam = async (req, res) => {
 };
 
 const getAvailableEmployees = async (req, res) => {
-  if (req.user.role !== 'manager') {
+  if (!isRole(req, 'manager')) {
     return res.status(403).json({ message: 'Access denied' });
   }
 
   try {
+    const employeeRole = await getRoleByName('employee');
     const employees = await User.findAll({
       where: {
-        role: 'employee',
+        roleId: employeeRole?.id,
         managerId: null,
       },
       include: [{ model: Role, as: 'roleDetails', attributes: ['id', 'name'] }],
@@ -209,13 +247,15 @@ const getAvailableEmployees = async (req, res) => {
 };
 
 const claimEmployee = async (req, res) => {
-  if (req.user.role !== 'manager') {
+  if (!isRole(req, 'manager')) {
     return res.status(403).json({ message: 'Access denied' });
   }
 
   try {
-    const employee = await User.findByPk(req.params.id);
-    if (!employee || employee.role !== 'employee') {
+    const employee = await User.findByPk(req.params.id, {
+      include: [{ model: Role, as: 'roleDetails', attributes: ['name'] }],
+    });
+    if (!employee || employee.roleDetails?.name !== 'employee') {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
@@ -235,13 +275,15 @@ const claimEmployee = async (req, res) => {
 };
 
 const releaseEmployee = async (req, res) => {
-  if (req.user.role !== 'manager') {
+  if (!isRole(req, 'manager')) {
     return res.status(403).json({ message: 'Access denied' });
   }
 
   try {
-    const employee = await User.findByPk(req.params.id);
-    if (!employee || employee.role !== 'employee') {
+    const employee = await User.findByPk(req.params.id, {
+      include: [{ model: Role, as: 'roleDetails', attributes: ['name'] }],
+    });
+    if (!employee || employee.roleDetails?.name !== 'employee') {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
@@ -256,7 +298,7 @@ const releaseEmployee = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createUser,
   updateUser,
   deleteUser,

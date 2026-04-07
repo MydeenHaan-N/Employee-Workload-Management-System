@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import axios from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
-import {jwtDecode} from 'jwt-decode'; // note: named import, not { jwtDecode }
+
+const getRoleName = (userLike) => (
+  userLike?.roleName
+  || userLike?.role
+  || userLike?.roleDetails?.name
+  || ''
+).toLowerCase().trim();
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -28,7 +34,6 @@ const Login = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -41,52 +46,25 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Attempting login →', import.meta.env.VITE_API_BASE_URL + '/auth/login');
-
       const res = await axios.post('/auth/login', {
         email: formData.email.trim(),
         password: formData.password,
       });
 
-      const { token } = res.data;
-
-      if (!token) {
-        throw new Error('No token received from server');
+      const nextUser = res.data?.user;
+      if (!nextUser) {
+        throw new Error('No user received from server');
       }
 
-      console.log('Token received (first 60 chars):', token.substring(0, 60) + '...');
+      login(nextUser);
 
-      // Decode token safely
-      let decoded;
-      try {
-        decoded = jwtDecode(token);
-        console.log('Decoded JWT payload:', decoded);
-      } catch (decodeErr) {
-        console.error('JWT decode failed:', decodeErr);
-        throw new Error('Invalid token format');
-      }
-
-      // Update auth context
-      login(token);
-
-      // Normalize role (very common source of bugs)
-      const role = (decoded.role || 'unknown').toLowerCase().trim();
-
-      console.log('Detected role:', role);
-
+      const role = getRoleName(nextUser) || 'unknown';
       if (!['admin', 'manager', 'employee'].includes(role)) {
-        console.warn('Unknown role → falling back to admin dashboard');
         navigate('/admin');
         return;
       }
 
-      // Successful redirect
       navigate(`/${role}`);
-      console.log('Navigating to:', `/${role}`);
-
-      // You can add real toast here later
-      // toast.success(`Welcome back, ${role}!`);
-
     } catch (err) {
       console.error('Login failed:', err);
 
@@ -96,7 +74,7 @@ const Login = () => {
         if (err.response.status === 401) {
           message = 'Invalid email or password';
         } else if (err.response.status === 404) {
-          message = 'Login endpoint not found – check backend';
+          message = 'Login endpoint not found - check backend';
         } else if (err.response.data?.message) {
           message = err.response.data.message;
         }
@@ -104,8 +82,7 @@ const Login = () => {
         message = 'Cannot reach backend. Is it running on port 5000?';
       }
 
-      alert(message); // temporary – replace with toast later
-      // toast.error(message);
+      alert(message);
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +130,7 @@ const Login = () => {
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                   errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
                 }`}
-                placeholder="••••••••"
+                placeholder="********"
                 disabled={isLoading}
                 required
               />

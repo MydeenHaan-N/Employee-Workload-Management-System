@@ -1,28 +1,31 @@
-const { Task } = require('../models/index');
-const { Op } = require('sequelize');
-
-const priorityWeights = {
-  High: 3,
-  Medium: 2,
-  Low: 1,
-};
+import { Op } from 'sequelize';
+import { Task, TaskAssignment } from '../models/index.js';
 
 const getWorkload = async (userId) => {
-  const tasks = await Task.findAll({
+  const assignments = await TaskAssignment.findAll({
     where: {
-      assignedTo: userId,
-      status: { [Op.in]: ['Pending', 'In Progress'] },
+      employeeId: userId,
+      isActive: true,
+      status: { [Op.in]: ['Pending', 'In Progress', 'Overdue'] },
     },
+    include: [{ model: Task, as: 'task', attributes: ['weight'] }],
   });
 
-  const score = tasks.reduce((sum, task) => sum + priorityWeights[task.priority], 0);
+  const score = assignments.reduce((sum, assignment) => {
+    const weight = assignment.task?.weight ?? 1;
+    return sum + (weight * (1 - ((assignment.completionPercent || 0) / 100)));
+  }, 0);
 
   let level;
   if (score < 5) level = 'Low';
   else if (score < 10) level = 'Medium';
   else level = 'High';
 
-  return { score, level };
+  return {
+    score,
+    level,
+    activeAssignments: assignments.length,
+  };
 };
 
-module.exports = { getWorkload };
+export { getWorkload };

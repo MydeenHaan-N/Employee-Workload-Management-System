@@ -4,6 +4,8 @@ import Layout from '../components/Layout';
 import Card from '../components/ui/Card';
 import { toast } from 'react-hot-toast';
 
+const getRoleName = (user) => user?.roleDetails?.name || user?.role || '';
+
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -45,8 +47,8 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
           <StatCard title="Total Users" value={isLoading ? '...' : users.length} bgColor="bg-blue-500" />
           <StatCard title="Roles" value={isLoading ? '...' : roles.length} bgColor="bg-slate-500" />
-          <StatCard title="Managers" value={isLoading ? '...' : users.filter((user) => user.role === 'manager').length} bgColor="bg-purple-500" />
-          <StatCard title="Employees" value={isLoading ? '...' : users.filter((user) => user.role === 'employee').length} bgColor="bg-green-500" />
+          <StatCard title="Managers" value={isLoading ? '...' : users.filter((user) => getRoleName(user) === 'manager').length} bgColor="bg-purple-500" />
+          <StatCard title="Employees" value={isLoading ? '...' : users.filter((user) => getRoleName(user) === 'employee').length} bgColor="bg-green-500" />
         </div>
       </div>
     </Layout>

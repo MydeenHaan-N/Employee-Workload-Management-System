@@ -1,34 +1,31 @@
-require('dotenv').config();
-const bcrypt = require('bcrypt');
-const { sequelize, User } = require('./models');
+import 'dotenv/config';
+import bcrypt from 'bcrypt';
+import { sequelize, User } from './models/index.js';
 
-async function resetAdminPassword() {
+const resetAdminPassword = async () => {
   try {
     await sequelize.authenticate();
 
     const email = 'admin@gmail.com';
-    const newPassword = 'admin123';           // ← you can change this
+    const newPassword = '123456';
+    const passwordHash = bcrypt.hashSync(newPassword, 10);
 
-    const hash = await bcrypt.hash(newPassword, 10);
-
-    const [updated] = await User.update(
-      { passwordHash: hash },
+    const [updatedCount] = await User.update(
+      { passwordHash },
       { where: { email } }
     );
 
-    if (updated === 0) {
-      console.log(`No user found with email: ${email}`);
-    } else {
-      console.log('Password reset successfully!');
-      console.log('Email:    ', email);
-      console.log('New password: ', newPassword);
-      console.log('Now go to login page and use these credentials.');
+    if (updatedCount === 0) {
+      console.log(`No user found with email ${email}`);
+      return;
     }
-  } catch (err) {
-    console.error('Error:', err.message);
+
+    console.log(`Password reset successfully for ${email}`);
+  } catch (error) {
+    console.error('Failed to reset password:', error);
   } finally {
     await sequelize.close();
   }
-}
+};
 
 resetAdminPassword();

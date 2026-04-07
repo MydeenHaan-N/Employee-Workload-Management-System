@@ -1,9 +1,9 @@
-const express = require('express');
-const authenticateJWT = require('../middleware/auth');
-const { getEmployeeWorkload } = require('../controllers/workloadController');
+import express from 'express';
+import authenticateJWT from '../middleware/auth.js';
+import { getEmployeeWorkload } from '../controllers/workloadController.js';
 
 const router = express.Router();
 
 router.get('/workload', authenticateJWT, getEmployeeWorkload);
 
-module.exports = router;
+export default router;

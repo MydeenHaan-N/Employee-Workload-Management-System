@@ -10,6 +10,7 @@ const defaultTaskForm = {
   description: '',
   priority: 'Medium',
   deadline: '',
+  weight: 1,
 };
 
 const ManagerCreateTaskPage = () => {
@@ -37,11 +38,11 @@ const ManagerCreateTaskPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Create Task</h1>
           <p className="mt-1 text-sm text-gray-600">
-            This page is only for task creation. No employee selection is required here.
+            Create a task with a workload weight. The system will use that weight to auto-assign the task fairly.
           </p>
         </div>
 
-        <Card title="Task Creation" subtitle="Managers can create any number of tasks from this page.">
+        <Card title="Task Creation" subtitle="Managers can create any number of tasks and let the backend assign them automatically.">
           <form onSubmit={handleCreateTask} className="space-y-5">
             <Field label="Task Title">
               <input
@@ -62,7 +63,7 @@ const ManagerCreateTaskPage = () => {
               />
             </Field>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-3">
               <Field label="Priority">
                 <select
                   value={taskForm.priority}
@@ -75,6 +76,18 @@ const ManagerCreateTaskPage = () => {
                 </select>
               </Field>
 
+              <Field label="Weight">
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={taskForm.weight}
+                  onChange={(e) => setTaskForm({ ...taskForm, weight: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </Field>
+
               <Field label="Deadline">
                 <input
                   type="date"
@@ -84,6 +97,10 @@ const ManagerCreateTaskPage = () => {
                   required
                 />
               </Field>
+            </div>
+
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              Weight should be between `1` and `10`. Higher weight means more workload, so the auto-assignment engine will treat it as a heavier task.
             </div>
 
             <div className="flex justify-end pt-2">

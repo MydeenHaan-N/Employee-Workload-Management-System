@@ -1,7 +1,7 @@
-const express = require('express');
-const authenticateJWT = require('../middleware/auth');
-const authorizeRoles = require('../middleware/authorize');
-const { createTask, getMyTasks, updateTaskStatus } = require('../controllers/taskController');
+import express from 'express';
+import authenticateJWT from '../middleware/auth.js';
+import authorizeRoles from '../middleware/authorize.js';
+import { createTask, getMyTasks, updateTaskStatus } from '../controllers/taskController.js';
 
 const router = express.Router();
 
@@ -11,4 +11,4 @@ router.post('/', authorizeRoles('manager'), createTask);
 router.get('/my', authorizeRoles('employee'), getMyTasks);
 router.put('/:id/status', authorizeRoles('employee'), updateTaskStatus);
 
-module.exports = router;
+export default router;

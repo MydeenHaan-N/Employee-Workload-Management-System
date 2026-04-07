@@ -1,4 +1,4 @@
-const { Role } = require('../models');
+import { Role } from '../models/index.js';
 
 const getAllRoles = async (_req, res) => {
   try {
@@ -32,7 +32,4 @@ const createRole = async (req, res) => {
   }
 };
 
-module.exports = {
-  getAllRoles,
-  createRole,
-};
+export { getAllRoles, createRole };

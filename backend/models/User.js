@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const  sequelize  = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const User = sequelize.define('User', {
   id: {
@@ -20,13 +20,9 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  role: {
-    type: DataTypes.ENUM('admin', 'manager', 'employee'),
-    allowNull: false,
-  },
   roleId: {
     type: DataTypes.INTEGER,
-    allowNull: true,
+    allowNull: false,
   },
   managerId: {
     type: DataTypes.INTEGER,
@@ -36,4 +32,4 @@ const User = sequelize.define('User', {
   timestamps: true,
 });
 
-module.exports = User;
+export default User;

@@ -2,10 +2,10 @@
   "name": "employee-workload-management-backend",
   "version": "1.0.0",
   "description": "Backend for Employee Workload Management System",
-  "main": "server.mjs",
+  "main": "server.js",
   "scripts": {
-    "start": "nodemon server.mjs",
-    "dev": "nodemon server.mjs",
+    "start": "nodemon server.js",
+    "dev": "nodemon server.js",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all"
   },
@@ -32,5 +32,5 @@
   ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "module"
 }

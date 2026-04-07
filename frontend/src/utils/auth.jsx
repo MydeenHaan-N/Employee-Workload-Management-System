@@ -1,71 +1,55 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
-import { useNavigate } from 'react-router-dom';   // ← optional but recommended
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from '../api/axiosInstance';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const navigate = useNavigate();   // helps with auto-redirect on invalid/expired token
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const navigate = useNavigate();
 
-  const normalizeDecodedUser = (decoded) => ({
-    ...decoded,
-    role: decoded?.role?.toLowerCase?.().trim?.() || '',
+  const normalizeUser = (nextUser) => ({
+    ...nextUser,
+    roleName: nextUser?.roleName?.toLowerCase?.().trim?.() || nextUser?.role?.toLowerCase?.().trim?.() || '',
   });
 
-  // 1. Load token from localStorage when app starts / refreshes
   useEffect(() => {
-    const token = localStorage.getItem('token');
-
-    if (token) {
+    const loadCurrentUser = async () => {
       try {
-        const decoded = jwtDecode(token);
-
-        // Optional but strongly recommended: check if token is still valid
-        if (decoded.exp * 1000 < Date.now()) {
-          console.warn('Token expired → logging out');
-          localStorage.removeItem('token');
-          setUser(null);
-          navigate('/login');
-          return;
-        }
-
-        setUser(normalizeDecodedUser(decoded));
-        // Optional: auto-redirect to dashboard based on role if on /login
-        // if (window.location.pathname === '/login') {
-        //   navigate(`/${decoded.role}`);
-        // }
+        const response = await axios.get('/auth/me');
+        setUser(normalizeUser(response.data.user));
       } catch (err) {
-        console.error('Invalid JWT token in storage', err);
-        localStorage.removeItem('token');
+        if (err.response?.status !== 401) {
+          console.error('Failed to restore session', err);
+        }
         setUser(null);
+      } finally {
+        setIsAuthReady(true);
       }
-    }
-  }, [navigate]);   // navigate is stable, no infinite loop
+    };
 
-  const login = (token) => {
-    localStorage.setItem('token', token);
-    try {
-      const decoded = jwtDecode(token);
-      setUser(normalizeDecodedUser(decoded));
+    loadCurrentUser();
+  }, []);
 
-      // Optional: immediate redirect after login
-      // (some people prefer doing this in Login component)
-      // navigate(`/${decoded.role}`);
-    } catch (err) {
-      console.error('Invalid token received during login', err);
-      logout();
-    }
+  const login = (nextUser) => {
+    setUser(normalizeUser(nextUser));
+    setIsAuthReady(true);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    try {
+      await axios.post('/auth/logout');
+    } catch (err) {
+      console.error('Logout request failed', err);
+    }
+
     setUser(null);
     navigate('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthReady }}>
       {children}
     </AuthContext.Provider>
   );

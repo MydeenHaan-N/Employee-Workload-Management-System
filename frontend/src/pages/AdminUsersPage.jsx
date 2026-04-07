@@ -6,6 +6,8 @@ import Table from '../components/ui/Table';
 import Button from '../components/ui/Button';
 import { toast } from 'react-hot-toast';
 
+const getRoleName = (user) => user?.roleDetails?.name || user?.role || 'employee';
+
 const defaultUserForm = {
   fullName: '',
   email: '',
@@ -52,7 +54,7 @@ const AdminUsersPage = () => {
         fullName: user.fullName || '',
         email: user.email || '',
         password: '',
-        role: user.role || 'employee',
+        role: getRoleName(user),
       });
     } else {
       setIsEditMode(false);
@@ -148,8 +150,8 @@ const AdminUsersPage = () => {
       header: 'Role',
       accessor: 'role',
       render: (user) => (
-        <span className={getRoleBadgeClass(user.role)}>
-          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+        <span className={getRoleBadgeClass(getRoleName(user))}>
+          {getRoleName(user).charAt(0).toUpperCase() + getRoleName(user).slice(1)}
         </span>
       ),
     },
@@ -158,7 +160,7 @@ const AdminUsersPage = () => {
       accessor: 'managerId',
       render: (user) => {
         const manager = users.find((item) => item.id === user.managerId);
-        return user.role === 'employee'
+        return getRoleName(user) === 'employee'
           ? <span>{manager?.fullName || 'Unassigned'}</span>
           : <span className="text-gray-400">Not applicable</span>;
       },

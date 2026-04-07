@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize  = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const Task = sequelize.define('Task', {
   id: {
@@ -15,21 +15,22 @@ const Task = sequelize.define('Task', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  weight: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1,
+    validate: {
+      min: 1,
+      max: 10,
+    },
+  },
   priority: {
     type: DataTypes.ENUM('High', 'Medium', 'Low'),
     allowNull: false,
   },
-  status: {
-    type: DataTypes.ENUM('Pending', 'In Progress', 'Completed', 'Overdue'),
-    defaultValue: 'Pending',
-  },
   deadline: {
     type: DataTypes.DATE,
     allowNull: false,
-  },
-  assignedTo: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
   },
   assignedBy: {
     type: DataTypes.INTEGER,
@@ -39,4 +40,4 @@ const Task = sequelize.define('Task', {
   timestamps: true,
 });
 
-module.exports = Task;
+export default Task;

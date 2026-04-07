@@ -1,7 +1,7 @@
-const express = require('express');
-const authenticateJWT = require('../middleware/auth');
-const authorizeRoles = require('../middleware/authorize');
-const {
+import express from 'express';
+import authenticateJWT from '../middleware/auth.js';
+import authorizeRoles from '../middleware/authorize.js';
+import {
   createUser,
   getMe,
   getAllUsers,
@@ -11,7 +11,7 @@ const {
   getAvailableEmployees,
   claimEmployee,
   releaseEmployee,
-} = require('../controllers/userController');
+} from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -24,8 +24,7 @@ router.get('/team', authorizeRoles('manager'), getMyTeam);
 router.get('/', authorizeRoles('admin'), getAllUsers);
 router.post('/:id/claim', authorizeRoles('manager'), claimEmployee);
 router.post('/:id/release', authorizeRoles('manager'), releaseEmployee);
-
 router.put('/:id', authorizeRoles('admin'), updateUser);
 router.delete('/:id', authorizeRoles('admin'), deleteUser);
 
-module.exports = router;
+export default router;
