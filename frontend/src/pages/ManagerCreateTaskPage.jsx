@@ -38,11 +38,11 @@ const ManagerCreateTaskPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Create Task</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Create a task with a workload weight. The system will use that weight to auto-assign the task fairly.
+            Create a weighted task and place it in your backlog. You can assign it later from the task assignment board.
           </p>
         </div>
 
-        <Card title="Task Creation" subtitle="Managers can create any number of tasks and let the backend assign them automatically.">
+        <Card title="Task Creation" subtitle="Managers can create tasks first, then assign them to specific employees from the assignment board.">
           <form onSubmit={handleCreateTask} className="space-y-5">
             <Field label="Task Title">
               <input
@@ -100,7 +100,7 @@ const ManagerCreateTaskPage = () => {
             </div>
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-              Weight should be between `1` and `10`. Higher weight means more workload, so the auto-assignment engine will treat it as a heavier task.
+              Weight should be between `1` and `10`. After creation, the task stays in backlog until you assign it manually or auto-assign it from the assignment board.
             </div>
 
             <div className="flex justify-end pt-2">

@@ -3,6 +3,7 @@ import Role from './Role.js';
 import User from './User.js';
 import Task from './Task.js';
 import TaskAssignment from './TaskAssignment.js';
+import Query from './Query.js';
 
 Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'roleDetails' });
@@ -22,6 +23,12 @@ TaskAssignment.belongsTo(User, { foreignKey: 'assignedBy', as: 'manager' });
 User.hasMany(User, { foreignKey: 'managerId', as: 'employees' });
 User.belongsTo(User, { foreignKey: 'managerId', as: 'manager' });
 
-export { User, Task, TaskAssignment, Role, sequelize };
+User.hasMany(Query, { foreignKey: 'employeeId', as: 'employeeQueries' });
+Query.belongsTo(User, { foreignKey: 'employeeId', as: 'employee' });
 
-export default { User, Task, TaskAssignment, Role, sequelize };
+User.hasMany(Query, { foreignKey: 'managerId', as: 'managerQueries' });
+Query.belongsTo(User, { foreignKey: 'managerId', as: 'queryManager' });
+
+export { User, Task, TaskAssignment, Query, Role, sequelize };
+
+export default { User, Task, TaskAssignment, Query, Role, sequelize };

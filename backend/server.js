@@ -8,6 +8,7 @@ import userRoutes from './routes/userRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
 import workloadRoutes from './routes/workloadRoutes.js';
+import queryRoutes from './routes/queryRoutes.js';
 import { seedInitialUsers } from './services/seedInitialUsers.js';
 
 const app = express();
@@ -28,12 +29,13 @@ app.use('/users', userRoutes);
 app.use('/roles', roleRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/workload', workloadRoutes);
+app.use('/queries', queryRoutes);
 
 app.get('/', (req, res) => {
   res.json({
     message: 'Backend is running!',
     time: new Date().toISOString(),
-    routes: ['/auth', '/users', '/roles', '/tasks', '/workload'],
+    routes: ['/auth', '/users', '/roles', '/tasks', '/workload', '/queries'],
   });
 });
 

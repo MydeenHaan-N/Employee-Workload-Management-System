@@ -12,7 +12,11 @@ import AdminRolesPage from './pages/AdminRolesPage';
 import ManagerDashboard from './pages/ManagerDashboard';
 import ManagerEmployeesPage from './pages/ManagerEmployeesPage';
 import ManagerCreateTaskPage from './pages/ManagerCreateTaskPage';
+import ManagerAvailableTasksPage from './pages/ManagerAvailableTasksPage';
+import ManagerTaskAssignmentPage from './pages/ManagerTaskAssignmentPage';
+import ManagerTaskHoldersPage from './pages/ManagerTaskHoldersPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
+import EmployeeTasksPage from './pages/EmployeeTasksPage';
 import Unauthorized from './pages/Unauthorized';
 
 function App() {
@@ -73,10 +77,42 @@ function App() {
           }
         />
         <Route
+          path="/manager/available-tasks"
+          element={
+            <ProtectedRoute allowedRoles={['manager']}>
+              <ManagerAvailableTasksPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/assign-task"
+          element={
+            <ProtectedRoute allowedRoles={['manager']}>
+              <ManagerTaskAssignmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/task-holders"
+          element={
+            <ProtectedRoute allowedRoles={['manager']}>
+              <ManagerTaskHoldersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/employee"
           element={
             <ProtectedRoute allowedRoles={['employee']}>
               <EmployeeDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee/tasks"
+          element={
+            <ProtectedRoute allowedRoles={['employee']}>
+              <EmployeeTasksPage />
             </ProtectedRoute>
           }
         />
