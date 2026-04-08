@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
 import { User, Role, Task, TaskAssignment } from '../models/index.js';
+import { buildEmployeeInsight, parseSkills, serializeSkills } from '../services/workforceInsightsService.js';
 
 const ACTIVE_TASK_STATUSES = ['Pending', 'In Progress', 'Overdue'];
 
@@ -11,7 +12,7 @@ const getRoleByName = (name) => Role.findOne({
 const isRole = (req, roleName) => req.user.roleName === roleName;
 
 const createUser = async (req, res) => {
-  const { fullName, email, password, role } = req.body;
+  const { fullName, email, password, role, skills } = req.body;
   const creatorRole = req.user.roleName;
 
   try {
@@ -31,9 +32,13 @@ const createUser = async (req, res) => {
       passwordHash,
       roleId: roleRecord.id,
       managerId: null,
+      skills: serializeSkills(skills),
     });
 
-    res.status(201).json(user);
+    res.status(201).json({
+      ...user.toJSON(),
+      skills: parseSkills(user.skills),
+    });
   } catch (err) {
     if (err.name === 'SequelizeValidationError') {
       const errors = err.errors.map((error) => error.message);
@@ -51,7 +56,7 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { fullName, role } = req.body;
+  const { fullName, role, skills } = req.body;
   const requesterRole = req.user.roleName;
 
   try {
@@ -86,8 +91,43 @@ const updateUser = async (req, res) => {
       fullName: fullName ?? user.fullName,
       roleId: nextRoleId,
       managerId: nextManagerId,
+      skills: skills === undefined ? user.skills : serializeSkills(skills),
     });
-    res.json(user);
+    res.json({
+      ...user.toJSON(),
+      skills: parseSkills(user.skills),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const updateUserSkills = async (req, res) => {
+  const { id } = req.params;
+  const { skills } = req.body;
+
+  try {
+    const user = await User.findByPk(id, {
+      include: [{ model: Role, as: 'roleDetails', attributes: ['name'] }],
+    });
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isAdmin = req.user.roleName === 'admin';
+    const isSelf = req.user.id === user.id;
+    const isManagingEmployee = req.user.roleName === 'manager'
+      && user.managerId === req.user.id
+      && user.roleDetails?.name === 'employee';
+
+    if (!isAdmin && !isSelf && !isManagingEmployee) {
+      return res.status(403).json({ message: 'You are not allowed to update these skills' });
+    }
+
+    await user.update({ skills: serializeSkills(skills) });
+    res.json({
+      ...user.toJSON(),
+      skills: parseSkills(user.skills),
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -122,7 +162,10 @@ const getMe = async (req, res) => {
     const user = await User.findByPk(req.user.id, {
       include: [{ model: Role, as: 'roleDetails', attributes: ['id', 'name', 'description'] }],
     });
-    res.json(user);
+    res.json({
+      ...user.toJSON(),
+      skills: parseSkills(user.skills),
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -135,7 +178,10 @@ const getAllUsers = async (req, res) => {
       include: [{ model: Role, as: 'roleDetails', attributes: ['id', 'name', 'description'] }],
       order: [['createdAt', 'DESC']],
     });
-    res.json(users);
+    res.json(users.map((user) => ({
+      ...user.toJSON(),
+      skills: parseSkills(user.skills),
+    })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -205,6 +251,7 @@ const getMyTeam = async (req, res) => {
 
     const team = employees.map((employee) => ({
       ...employee.toJSON(),
+      skills: parseSkills(employee.skills),
       workload: workloadByEmployee[employee.id] || {
         total: 0,
         pending: 0,
@@ -216,6 +263,10 @@ const getMyTeam = async (req, res) => {
         activeWeight: 0,
         remainingWeight: 0,
       },
+      insights: buildEmployeeInsight({
+        id: employee.id,
+        skills: employee.skills,
+      }, assignments.filter((assignment) => assignment.employeeId === employee.id)),
     }));
 
     res.json(team);
@@ -240,7 +291,10 @@ const getAvailableEmployees = async (req, res) => {
       order: [['fullName', 'ASC']],
     });
 
-    res.json(employees);
+    res.json(employees.map((employee) => ({
+      ...employee.toJSON(),
+      skills: parseSkills(employee.skills),
+    })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -301,6 +355,7 @@ const releaseEmployee = async (req, res) => {
 export {
   createUser,
   updateUser,
+  updateUserSkills,
   deleteUser,
   getMe,
   getAllUsers,

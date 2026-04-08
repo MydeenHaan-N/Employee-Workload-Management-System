@@ -1,30 +1,32 @@
 import { Op } from 'sequelize';
 import { Task, TaskAssignment } from '../models/index.js';
+import { ACTIVE_STATUSES, buildEmployeeInsight, buildEscalationAlerts } from './workforceInsightsService.js';
 
 const getWorkload = async (userId) => {
   const assignments = await TaskAssignment.findAll({
     where: {
       employeeId: userId,
-      isActive: true,
-      status: { [Op.in]: ['Pending', 'In Progress', 'Overdue'] },
+      status: { [Op.in]: [...ACTIVE_STATUSES, 'Completed'] },
     },
-    include: [{ model: Task, as: 'task', attributes: ['weight'] }],
+    include: [{ model: Task, as: 'task', attributes: ['id', 'title', 'weight', 'priority', 'deadline', 'requiredSkills'] }],
+    order: [[{ model: Task, as: 'task' }, 'deadline', 'ASC']],
   });
 
-  const score = assignments.reduce((sum, assignment) => {
-    const weight = assignment.task?.weight ?? 1;
-    return sum + (weight * (1 - ((assignment.completionPercent || 0) / 100)));
-  }, 0);
+  const insight = buildEmployeeInsight({ id: userId, skills: [] }, assignments);
+  const alerts = buildEscalationAlerts(assignments.filter((assignment) => assignment.isActive));
 
   let level;
-  if (score < 5) level = 'Low';
-  else if (score < 10) level = 'Medium';
+  if (insight.workloadScore < 5) level = 'Low';
+  else if (insight.workloadScore < 10) level = 'Medium';
   else level = 'High';
 
   return {
-    score,
+    score: insight.workloadScore,
     level,
-    activeAssignments: assignments.length,
+    activeAssignments: insight.activeAssignments,
+    burnoutRisk: insight.burnoutRisk,
+    performance: insight.performance,
+    alerts,
   };
 };
 

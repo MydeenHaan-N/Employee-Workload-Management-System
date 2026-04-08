@@ -4,9 +4,11 @@ import authorizeRoles from '../middleware/authorize.js';
 import {
   createTask,
   getManagerTaskBoard,
+  getManagerAnalytics,
   assignTaskToEmployee,
   autoAssignBacklogTasks,
   getMyTasks,
+  simulateTaskAssignment,
   updateTaskStatus,
 } from '../controllers/taskController.js';
 
@@ -15,6 +17,8 @@ const router = express.Router();
 router.use(authenticateJWT);
 
 router.post('/', authorizeRoles('manager'), createTask);
+router.post('/simulate-assignment', authorizeRoles('manager'), simulateTaskAssignment);
+router.get('/analytics', authorizeRoles('manager'), getManagerAnalytics);
 router.get('/manager-board', authorizeRoles('manager'), getManagerTaskBoard);
 router.post('/auto-assign', authorizeRoles('manager'), autoAssignBacklogTasks);
 router.post('/:id/assign', authorizeRoles('manager'), assignTaskToEmployee);

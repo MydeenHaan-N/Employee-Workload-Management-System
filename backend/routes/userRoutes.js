@@ -6,6 +6,7 @@ import {
   getMe,
   getAllUsers,
   updateUser,
+  updateUserSkills,
   deleteUser,
   getMyTeam,
   getAvailableEmployees,
@@ -24,6 +25,7 @@ router.get('/team', authorizeRoles('manager'), getMyTeam);
 router.get('/', authorizeRoles('admin'), getAllUsers);
 router.post('/:id/claim', authorizeRoles('manager'), claimEmployee);
 router.post('/:id/release', authorizeRoles('manager'), releaseEmployee);
+router.put('/:id/skills', updateUserSkills);
 router.put('/:id', authorizeRoles('admin'), updateUser);
 router.delete('/:id', authorizeRoles('admin'), deleteUser);
 

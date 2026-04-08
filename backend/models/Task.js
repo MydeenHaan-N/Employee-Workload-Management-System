@@ -36,6 +36,11 @@ const Task = sequelize.define('Task', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  requiredSkills: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    defaultValue: '[]',
+  },
 }, {
   timestamps: true,
 });

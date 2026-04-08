@@ -12,144 +12,120 @@ const getRoleName = (userLike) => (
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [errors, setErrors] = useState({});
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
-
-    if (!formData.password) newErrors.password = 'Password is required';
-    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
     setIsLoading(true);
 
     try {
-      const res = await axios.post('/auth/login', {
+      const response = await axios.post('/auth/login', {
         email: formData.email.trim(),
         password: formData.password,
       });
 
-      const nextUser = res.data?.user;
-      if (!nextUser) {
-        throw new Error('No user received from server');
-      }
-
+      const nextUser = response.data?.user;
       login(nextUser);
-
-      const role = getRoleName(nextUser) || 'unknown';
-      if (!['admin', 'manager', 'employee'].includes(role)) {
-        navigate('/admin');
-        return;
-      }
-
-      navigate(`/${role}`);
+      navigate(`/${getRoleName(nextUser) || 'admin'}`);
     } catch (err) {
-      console.error('Login failed:', err);
-
-      let message = 'Something went wrong. Please try again.';
-
-      if (err.response) {
-        if (err.response.status === 401) {
-          message = 'Invalid email or password';
-        } else if (err.response.status === 404) {
-          message = 'Login endpoint not found - check backend';
-        } else if (err.response.data?.message) {
-          message = err.response.data.message;
-        }
-      } else if (err.code === 'ERR_NETWORK') {
-        message = 'Cannot reach backend. Is it running on port 5000?';
-      }
-
-      alert(message);
+      setError(err.response?.data?.message || 'Unable to sign in');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-2xl bg-blue-600 mb-6">
-            <span className="text-2xl font-bold text-white">ETM</span>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(196,106,47,0.24),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(47,107,95,0.18),transparent_28%)]" />
+      <div className="relative grid w-full max-w-6xl overflow-hidden rounded-[36px] border border-[rgba(58,44,30,0.12)] bg-[rgba(255,251,245,0.84)] shadow-[0_30px_80px_rgba(89,66,44,0.18)] backdrop-blur lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="bg-[#20150f] px-8 py-10 text-white lg:px-12 lg:py-14">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#c46a2f] text-xl font-bold shadow-[0_18px_36px_rgba(196,106,47,0.24)]">
+            WM
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Sign in</h2>
-          <p className="mt-2 text-sm text-gray-600">Employee Task Management System</p>
-        </div>
+          <p className="mt-8 text-sm uppercase tracking-[0.22em] text-[#d9ba9b]">Mini Capstone Platform</p>
+          <h1 className="mt-4 max-w-lg text-4xl font-semibold leading-tight">
+            Intelligent employee workload management for real team decisions.
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-7 text-[#e8d8c8]">
+            Plan assignments, predict overload, monitor execution, and keep your workforce balanced with a smarter command center.
+          </p>
 
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {[
+              ['Smart Assignment', 'Find the best fit using skills, performance, and workload.'],
+              ['Burnout Alerts', 'Spot overload before deadlines start slipping.'],
+              ['Analytics', 'Track trends, risk, and team execution in one place.'],
+            ].map(([title, copy]) => (
+              <div key={title} className="rounded-[24px] border border-white/10 bg-white/6 p-4">
+                <p className="font-semibold">{title}</p>
+                <p className="mt-2 text-sm leading-6 text-[#dccabc]">{copy}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="px-8 py-10 lg:px-12 lg:py-14">
+          <p className="text-sm uppercase tracking-[0.22em] text-[#8e3f16]">Welcome back</p>
+          <h2 className="mt-3 text-3xl font-semibold text-[#20150f]">Sign in to continue</h2>
+          <p className="mt-3 text-sm leading-6 text-[#6b5a4f]">
+            Use the seeded sample accounts or your own users created from the admin panel.
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <label className="mb-2 block text-sm font-medium text-[#3a2c1e]">Email</label>
               <input
                 name="email"
                 type="email"
-                autoComplete="email"
                 value={formData.email}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                  errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-                placeholder="admin@example.com"
-                disabled={isLoading}
+                onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
+                className="w-full rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 outline-none transition focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
+                placeholder="admin@gmail.com"
                 required
               />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label className="mb-2 block text-sm font-medium text-[#3a2c1e]">Password</label>
               <input
                 name="password"
                 type="password"
-                autoComplete="current-password"
                 value={formData.password}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                  errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-                placeholder="********"
-                disabled={isLoading}
+                onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
+                className="w-full rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 outline-none transition focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
+                placeholder="123456"
                 required
               />
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
             </div>
+
+            {error ? (
+              <div className="rounded-2xl border border-[rgba(184,61,61,0.16)] bg-[rgba(184,61,61,0.08)] px-4 py-3 text-sm text-[#9c3232]">
+                {error}
+              </div>
+            ) : null}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-2xl bg-[#c46a2f] px-5 py-3.5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(196,106,47,0.24)] transition hover:bg-[#ad5922] disabled:opacity-60"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? 'Signing in...' : 'Enter Workspace'}
             </button>
           </form>
-        </div>
 
-        <p className="text-center text-xs text-gray-500 mt-8">
-          © {new Date().getFullYear()} Employee Task Management System
-        </p>
+          <div className="mt-8 rounded-[24px] border border-[rgba(58,44,30,0.1)] bg-white/60 p-4 text-sm text-[#6b5a4f]">
+            Demo accounts:
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <span>`admin@gmail.com`</span>
+              <span>`haan@gmail.com`</span>
+              <span>`mydeen@gamil.com`</span>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

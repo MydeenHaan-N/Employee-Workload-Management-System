@@ -1,231 +1,146 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
-import { alertService } from '../services/alertService';
-import { toastService, toastMessages } from '../services/toastService';
+import Button from './ui/Button';
 
-/**
- * Main layout component with fixed sidebar, header, and scrollable content area
- * Supports mobile responsiveness with collapsible sidebar
- */
+const navigationByRole = {
+  admin: [
+    { to: '/admin', label: 'Overview', icon: 'A' },
+    { to: '/admin/users', label: 'Users', icon: 'U' },
+    { to: '/admin/roles', label: 'Roles', icon: 'R' },
+  ],
+  manager: [
+    { to: '/manager', label: 'Command Center', icon: 'C' },
+    { to: '/manager/employees', label: 'People', icon: 'P' },
+    { to: '/manager/create-task', label: 'Create Task', icon: 'T' },
+    { to: '/manager/available-tasks', label: 'Backlog', icon: 'B' },
+    { to: '/manager/assign-task', label: 'Assignment Lab', icon: 'L' },
+    { to: '/manager/task-holders', label: 'Execution View', icon: 'E' },
+  ],
+  employee: [
+    { to: '/employee', label: 'Overview', icon: 'O' },
+    { to: '/employee/tasks', label: 'My Tasks', icon: 'M' },
+  ],
+};
+
+const roleCopy = {
+  admin: {
+    title: 'Administration Studio',
+    subtitle: 'Own the structure behind the system.',
+  },
+  manager: {
+    title: 'Workload Command Center',
+    subtitle: 'Balance people, priorities, and deadlines from one place.',
+  },
+  employee: {
+    title: 'Personal Work Hub',
+    subtitle: 'Track progress, protect focus, and flag blockers early.',
+  },
+};
 
 const Layout = ({ children, role }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const handleLogout = async () => {
-    const result = await alertService.confirmLogout();
-    
-    if (result.isConfirmed) {
-      logout();
-      toastService.success(toastMessages.logoutSuccess);
-      navigate('/login');
-    }
-  };
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const navItems = navigationByRole[role] || [];
+  const headerCopy = roleCopy[role] || roleCopy.employee;
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
+    <div className="min-h-screen bg-transparent text-[#20150f]">
+      <div className="mx-auto flex min-h-screen max-w-[1600px] gap-5 px-3 py-3 lg:px-5 lg:py-5">
+        {sidebarOpen && (
+          <button
+            type="button"
+            className="fixed inset-0 z-30 bg-[rgba(32,21,15,0.28)] lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
-      {/* Sidebar */}
-      <aside
-        className={`
-          fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
-      >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">W</span>
+        <aside className={`fixed inset-y-3 left-3 z-40 w-[290px] rounded-[30px] border border-[rgba(58,44,30,0.12)] bg-[linear-gradient(180deg,rgba(255,252,246,0.95),rgba(247,240,232,0.92))] p-5 shadow-[0_24px_60px_rgba(89,66,44,0.14)] backdrop-blur transition duration-300 lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-[120%]'}`}>
+          <div className="flex h-full flex-col">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#20150f] text-lg font-bold text-white shadow-[0_14px_28px_rgba(32,21,15,0.2)]">
+                  WM
+                </div>
+                <h1 className="mt-4 text-xl font-semibold">{headerCopy.title}</h1>
+                <p className="mt-1 text-sm leading-6 text-[#6b5a4f]">{headerCopy.subtitle}</p>
               </div>
-              <span className="text-lg font-semibold text-gray-900">WorkloadMS</span>
-            </div>
-            <button
-              onClick={toggleSidebar}
-              className="lg:hidden text-gray-500 hover:text-gray-700 focus:outline-none"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-            <SidebarLink
-              to={`/${role}`}
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              }
-              label="Dashboard"
-            />
-            {role === 'admin' && (
-              <>
-                <SidebarLink
-                  to="/admin/users"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  }
-                  label="Add User"
-                />
-                <SidebarLink
-                  to="/admin/roles"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  }
-                  label="Add Role"
-                />
-              </>
-            )}
-            {role === 'manager' && (
-              <>
-                <SidebarLink
-                  to="/manager/employees"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  }
-                  label="Available Employees"
-                />
-                <SidebarLink
-                  to="/manager/create-task"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  }
-                  label="Create Task"
-                />
-                <SidebarLink
-                  to="/manager/available-tasks"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  }
-                  label="Available Tasks"
-                />
-                <SidebarLink
-                  to="/manager/assign-task"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" />
-                    </svg>
-                  }
-                  label="Assign Tasks"
-                />
-                <SidebarLink
-                  to="/manager/task-holders"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  }
-                  label="Task Holders"
-                />
-              </>
-            )}
-            {role === 'employee' && (
-              <SidebarLink
-                to="/employee/tasks"
-                icon={
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                }
-                label="My Tasks"
-              />
-            )}
-          </nav>
-        </div>
-      </aside>
-
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 z-10">
-          <div className="flex items-center justify-between px-6 py-4">
-            <button
-              onClick={toggleSidebar}
-              className="lg:hidden text-gray-500 hover:text-gray-700 focus:outline-none"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-
-            <div className="flex-1" />
-
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.fullName || 'User'}</p>
-                <p className="text-xs text-gray-500 capitalize">{role}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                title="Sign out"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+              <button type="button" className="rounded-xl p-2 text-[#6b5a4f] lg:hidden" onClick={() => setSidebarOpen(false)}>
+                x
               </button>
             </div>
-          </div>
-        </header>
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          <div className="max-w-7xl mx-auto">
-            {children}
+            <div className="mt-8 rounded-[24px] bg-[rgba(196,106,47,0.1)] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-[#8e3f16]">Signed in as</p>
+              <p className="mt-2 text-base font-semibold">{user?.fullName || 'User'}</p>
+              <p className="text-sm capitalize text-[#6b5a4f]">{role}</p>
+            </div>
+
+            <nav className="mt-6 space-y-2">
+              {navItems.map((item) => {
+                const active = location.pathname === item.to;
+                return (
+                  <button
+                    key={item.to}
+                    type="button"
+                    onClick={() => {
+                      navigate(item.to);
+                      setSidebarOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition ${active ? 'bg-[#20150f] text-white shadow-[0_14px_28px_rgba(32,21,15,0.16)]' : 'text-[#3a2c1e] hover:bg-white/70'}`}
+                  >
+                    <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold ${active ? 'bg-white/12 text-white' : 'bg-[rgba(196,106,47,0.12)] text-[#8e3f16]'}`}>
+                      {item.icon}
+                    </span>
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="mt-auto rounded-[24px] border border-[rgba(58,44,30,0.08)] bg-white/60 p-4">
+              <p className="text-sm text-[#6b5a4f]">Project mode</p>
+              <p className="mt-1 text-base font-semibold">Capstone Edition</p>
+              <Button className="mt-4 w-full" variant="outline" onClick={logout}>
+                Sign Out
+              </Button>
+            </div>
           </div>
-        </main>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-3 z-20 rounded-[28px] border border-[rgba(58,44,30,0.1)] bg-[rgba(255,252,246,0.78)] px-5 py-4 shadow-[0_12px_36px_rgba(89,66,44,0.08)] backdrop-blur">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[rgba(58,44,30,0.12)] bg-white/70 text-[#3a2c1e] lg:hidden"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  =
+                </button>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#8e3f16]">Employee Workload Management</p>
+                  <h2 className="text-xl font-semibold text-[#20150f]">{headerCopy.title}</h2>
+                </div>
+              </div>
+              <div className="hidden items-center gap-3 md:flex">
+                <div className="rounded-2xl bg-[rgba(47,107,95,0.1)] px-4 py-2 text-sm font-medium text-[#25564d]">
+                  Decision support enabled
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 px-1 py-5 lg:px-2">
+            <div className="space-y-6">{children}</div>
+          </main>
+        </div>
       </div>
     </div>
-  );
-};
-
-const SidebarLink = ({ to, icon, label }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const currentUrl = `${location.pathname}${location.search}`;
-  const isExactUrl = currentUrl === to;
-  const isPathOnlyLink = !to.includes('?');
-  const isActive = isExactUrl || (isPathOnlyLink && location.pathname === to);
-
-  return (
-    <button
-      onClick={() => navigate(to)}
-      className={`
-        w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200
-        ${isActive
-          ? 'bg-blue-50 text-blue-700'
-          : 'text-gray-700 hover:bg-gray-100'
-        }
-      `}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
   );
 };
 

@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
 import { User, Role, Task, TaskAssignment } from '../models/index.js';
+import { serializeSkills } from './workforceInsightsService.js';
 
 const INITIAL_USERS = [
   {
@@ -8,27 +9,30 @@ const INITIAL_USERS = [
     email: 'admin@gmail.com',
     password: '123456',
     role: 'admin',
+    skills: ['governance', 'reporting'],
   },
   {
     fullName: 'Haan Manager',
     email: 'haan@gmail.com',
     password: '123456',
     role: 'manager',
+    skills: ['planning', 'communication', 'workload balancing'],
   },
   {
     fullName: 'Mydeen Employee',
     email: 'mydeen@gamil.com',
     password: '123456',
     role: 'employee',
+    skills: ['documentation', 'support', 'reporting'],
   },
 ];
 
 const SAMPLE_EMPLOYEES = [
-  { fullName: 'Mydeen Employee', email: 'mydeen@gamil.com' },
-  { fullName: 'Aarav Kumar', email: 'aarav.employee@gmail.com' },
-  { fullName: 'Priya Sharma', email: 'priya.employee@gmail.com' },
-  { fullName: 'Rahul Verma', email: 'rahul.employee@gmail.com' },
-  { fullName: 'Sneha Iyer', email: 'sneha.employee@gmail.com' },
+  { fullName: 'Mydeen Employee', email: 'mydeen@gamil.com', skills: ['documentation', 'support', 'reporting'] },
+  { fullName: 'Aarav Kumar', email: 'aarav.employee@gmail.com', skills: ['recruitment', 'forecasting', 'analytics'] },
+  { fullName: 'Priya Sharma', email: 'priya.employee@gmail.com', skills: ['operations', 'timesheets', 'compliance'] },
+  { fullName: 'Rahul Verma', email: 'rahul.employee@gmail.com', skills: ['finance', 'auditing', 'reporting'] },
+  { fullName: 'Sneha Iyer', email: 'sneha.employee@gmail.com', skills: ['support', 'escalations', 'documentation'] },
 ];
 
 const SAMPLE_TASKS = [
@@ -38,6 +42,7 @@ const SAMPLE_TASKS = [
     priority: 'High',
     weight: 8,
     deadlineOffsetDays: 5,
+    requiredSkills: ['forecasting', 'analytics'],
   },
   {
     title: 'Update onboarding checklist',
@@ -45,6 +50,7 @@ const SAMPLE_TASKS = [
     priority: 'Medium',
     weight: 3,
     deadlineOffsetDays: 8,
+    requiredSkills: ['documentation'],
   },
   {
     title: 'Audit pending reimbursement requests',
@@ -52,6 +58,7 @@ const SAMPLE_TASKS = [
     priority: 'Low',
     weight: 2,
     deadlineOffsetDays: 3,
+    requiredSkills: ['auditing', 'finance'],
   },
   {
     title: 'Compile support escalation report',
@@ -59,6 +66,7 @@ const SAMPLE_TASKS = [
     priority: 'High',
     weight: 6,
     deadlineOffsetDays: 2,
+    requiredSkills: ['support', 'escalations'],
   },
   {
     title: 'Verify timesheet compliance',
@@ -66,6 +74,7 @@ const SAMPLE_TASKS = [
     priority: 'Medium',
     weight: 4,
     deadlineOffsetDays: 4,
+    requiredSkills: ['timesheets', 'compliance'],
   },
 ];
 
@@ -100,6 +109,7 @@ const seedInitialUsers = async () => {
         fullName: initialUser.fullName,
         roleId: roleRecord.id,
         managerId: roleRecord.name === 'employee' ? existingUser.managerId : null,
+        skills: serializeSkills(initialUser.skills),
       });
       continue;
     }
@@ -111,6 +121,7 @@ const seedInitialUsers = async () => {
       passwordHash,
       roleId: roleRecord.id,
       managerId: null,
+      skills: serializeSkills(initialUser.skills),
     });
   }
 
@@ -129,6 +140,7 @@ const seedInitialUsers = async () => {
         fullName: employeeSeed.fullName,
         roleId: roleRecords.employee.id,
         managerId: manager.id,
+        skills: serializeSkills(employeeSeed.skills),
       });
       continue;
     }
@@ -140,6 +152,7 @@ const seedInitialUsers = async () => {
       passwordHash,
       roleId: roleRecords.employee.id,
       managerId: manager.id,
+      skills: serializeSkills(employeeSeed.skills),
     });
   }
 
@@ -156,6 +169,7 @@ const seedInitialUsers = async () => {
         weight: taskSeed.weight,
         deadline: addDays(taskSeed.deadlineOffsetDays),
         assignedBy: manager.id,
+        requiredSkills: serializeSkills(taskSeed.requiredSkills),
       },
     });
   }

@@ -1,8 +1,4 @@
-import React from 'react';
-
-/**
- * Reusable Input component with label, error handling, and validation states
- */
+import React, { useId } from 'react';
 
 const Input = ({
   label,
@@ -16,58 +12,39 @@ const Input = ({
   disabled = false,
   helpText,
   className = '',
+  as = 'input',
+  children,
   ...props
 }) => {
-  const inputId = name || `input-${Math.random().toString(36).substr(2, 9)}`;
-
-  const inputClasses = `
-    block w-full px-4 py-2.5 text-sm text-gray-900 bg-white border rounded-lg 
-    transition-colors duration-200
-    focus:outline-none focus:ring-2 focus:ring-offset-0
-    disabled:bg-gray-100 disabled:cursor-not-allowed
-    ${error 
-      ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-    }
-    ${className}
-  `.trim().replace(/\s+/g, ' ');
+  const generatedId = useId();
+  const inputId = name || generatedId;
+  const Tag = as;
+  const classes = `w-full rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 text-sm text-[#20150f] outline-none transition focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)] disabled:cursor-not-allowed disabled:bg-[rgba(245,239,231,0.7)] ${error ? 'border-[#b83d3d] focus:border-[#b83d3d] focus:ring-[rgba(184,61,61,0.14)]' : ''} ${className}`;
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {label && (
-        <label
-          htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700"
-        >
+        <label htmlFor={inputId} className="block text-sm font-medium text-[#3a2c1e]">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required ? <span className="ml-1 text-[#b83d3d]">*</span> : null}
         </label>
       )}
-      
-      <input
+      <Tag
         id={inputId}
         name={name}
-        type={type}
+        type={as === 'input' ? type : undefined}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
         required={required}
-        className={inputClasses}
+        className={classes}
         {...props}
-      />
-      
-      {error && (
-        <p className="text-sm text-red-600 mt-1">
-          {error}
-        </p>
-      )}
-      
-      {helpText && !error && (
-        <p className="text-sm text-gray-500 mt-1">
-          {helpText}
-        </p>
-      )}
+      >
+        {children}
+      </Tag>
+      {error ? <p className="text-sm text-[#b83d3d]">{error}</p> : null}
+      {!error && helpText ? <p className="text-sm text-[#6b5a4f]">{helpText}</p> : null}
     </div>
   );
 };

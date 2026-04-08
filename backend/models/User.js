@@ -28,6 +28,11 @@ const User = sequelize.define('User', {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  skills: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    defaultValue: '[]',
+  },
 }, {
   timestamps: true,
 });

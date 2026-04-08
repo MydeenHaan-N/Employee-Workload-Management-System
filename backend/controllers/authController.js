@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User, Role } from '../models/index.js';
+import { parseSkills } from '../services/workforceInsightsService.js';
 
 const getAuthCookieOptions = () => ({
   httpOnly: true,
@@ -40,6 +41,7 @@ const login = async (req, res) => {
         fullName: user.fullName,
         roleId: user.roleId,
         roleName: user.roleDetails?.name,
+        skills: parseSkills(user.skills),
       },
     });
   } catch (err) {
@@ -63,6 +65,7 @@ const getMe = async (req, res) => {
         fullName: user.fullName,
         roleId: user.roleId,
         roleName: user.roleDetails?.name,
+        skills: parseSkills(user.skills),
       },
     });
   } catch (err) {

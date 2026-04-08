@@ -6,244 +6,198 @@ import Button from '../components/ui/Button';
 import { toast } from 'react-hot-toast';
 
 const ManagerDashboard = () => {
-  const [employees, setEmployees] = useState([]);
-  const [availableEmployees, setAvailableEmployees] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showQueries, setShowQueries] = useState(false);
+  const [board, setBoard] = useState({ team: [], alerts: [], analytics: null, summary: null });
   const [queries, setQueries] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isQueriesLoading, setIsQueriesLoading] = useState(false);
+  const [showQueries, setShowQueries] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState({});
-  const [replyingQueryId, setReplyingQueryId] = useState(null);
+
+  const load = async () => {
+    try {
+      const [analyticsResponse, unreadResponse] = await Promise.all([
+        axios.get('/tasks/analytics'),
+        axios.get('/queries/manager/unread-count'),
+      ]);
+      setBoard(analyticsResponse.data);
+      setUnreadCount(unreadResponse.data.unreadCount || 0);
+    } catch {
+      toast.error('Failed to load manager dashboard');
+    }
+  };
 
   useEffect(() => {
-    loadManagerData();
-    loadUnreadQueryCount();
-
-    const intervalId = window.setInterval(() => {
-      loadUnreadQueryCount();
-    }, 30000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
+    load();
   }, []);
 
-  const loadManagerData = async () => {
-    setIsLoading(true);
-    try {
-      const [teamResponse, availableResponse] = await Promise.all([
-        axios.get('/users/team'),
-        axios.get('/users/available'),
-      ]);
-      setEmployees(teamResponse.data);
-      setAvailableEmployees(availableResponse.data);
-    } catch (err) {
-      console.error('Failed to fetch manager data:', err);
-      toast.error(err.response?.data?.message || 'Failed to load manager dashboard');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadUnreadQueryCount = async () => {
-    try {
-      const response = await axios.get('/queries/manager/unread-count');
-      setUnreadCount(response.data.unreadCount || 0);
-    } catch (err) {
-      console.error('Failed to load unread query count:', err);
-    }
-  };
-
   const openQueries = async () => {
-    setShowQueries(true);
-    setIsQueriesLoading(true);
     try {
       const response = await axios.get('/queries/manager?markRead=true');
       setQueries(response.data.queries || []);
       setUnreadCount(0);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to load employee questions');
-    } finally {
-      setIsQueriesLoading(false);
+      setShowQueries(true);
+    } catch {
+      toast.error('Failed to load employee queries');
     }
   };
 
-  const handleReply = async (queryId) => {
-    const reply = replyDrafts[queryId];
-    if (!reply?.trim()) {
-      toast.error('Reply is required');
-      return;
-    }
-
-    setReplyingQueryId(queryId);
+  const reply = async (queryId) => {
     try {
-      const response = await axios.post(`/queries/${queryId}/reply`, { reply: reply.trim() });
+      const response = await axios.post(`/queries/${queryId}/reply`, { reply: replyDrafts[queryId] });
       setQueries((prev) => prev.map((query) => (query.id === queryId ? response.data : query)));
-      setReplyDrafts((prev) => ({ ...prev, [queryId]: '' }));
-      toast.success('Reply sent successfully');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send reply');
-    } finally {
-      setReplyingQueryId(null);
+      toast.success('Reply sent');
+    } catch {
+      toast.error('Failed to send reply');
     }
   };
 
-  const totalTasks = employees.reduce((sum, emp) => sum + (emp.workload?.total || 0), 0);
-  const heavyWorkload = employees.filter((emp) => (emp.workload?.total || 0) > 6).length;
-  const openQueryCount = useMemo(
-    () => queries.filter((query) => query.status === 'Open').length,
-    [queries]
+  const criticalEmployees = useMemo(
+    () => board.team.filter((employee) => employee.burnoutRisk?.level === 'Critical'),
+    [board.team]
   );
 
   return (
     <Layout role="manager">
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Manager Dashboard</h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Use the sidebar to manage employees and tasks, and use the query bell to answer employee questions.
-            </p>
+      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="overflow-hidden bg-[linear-gradient(135deg,#20150f,#4f3121)] text-white">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#d8b99b]">Manager Command Center</p>
+          <h1 className="mt-4 max-w-2xl text-4xl font-semibold leading-tight">
+            Balance work with recommendations, simulation, alerts, and performance visibility.
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[#eadbcc]">
+            This screen now works like an operational decision dashboard instead of a basic CRUD home page.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button onClick={openQueries}>Employee Mailbox {unreadCount ? `(${unreadCount})` : ''}</Button>
+            <Button variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/14" onClick={load}>Refresh Insights</Button>
           </div>
-          <button
-            type="button"
-            onClick={openQueries}
-            className="relative inline-flex items-center justify-center rounded-full border border-gray-200 bg-white p-3 text-gray-700 shadow-sm transition hover:bg-gray-50"
-            title="Employee Queries"
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            {unreadCount > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-xs font-semibold text-white">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
+        </Card>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          <StatCard title="Team Members" value={isLoading ? '...' : employees.length} bgColor="bg-blue-500" />
-          <StatCard title="Available Employees" value={isLoading ? '...' : availableEmployees.length} bgColor="bg-emerald-500" />
-          <StatCard title="Total Tasks" value={isLoading ? '...' : totalTasks} bgColor="bg-purple-500" />
-          <StatCard title="Heavy Workload" value={isLoading ? '...' : heavyWorkload} bgColor="bg-red-500" />
-        </div>
+        <Card title="Operational Snapshot" subtitle="Top-level health of the current team.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Metric label="Team Members" value={board.summary?.teamCount || 0} />
+            <Metric label="Assigned Tasks" value={board.summary?.assignedTaskCount || 0} />
+            <Metric label="Critical Risk" value={board.summary?.criticalRiskEmployees || 0} />
+            <Metric label="Avg Performance" value={board.analytics?.averagePerformance || 0} />
+          </div>
+        </Card>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card title="Escalation Alerts" subtitle="Auto-generated reminders and overdue warnings.">
+          <div className="space-y-3">
+            {(board.alerts || []).slice(0, 5).map((alert, index) => (
+              <div key={`${alert.assignmentId}-${index}`} className="rounded-[20px] border border-[rgba(58,44,30,0.08)] bg-white/60 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8e3f16]">{alert.type}</p>
+                <p className="mt-2 text-sm text-[#20150f]">{alert.message}</p>
+              </div>
+            ))}
+            {!(board.alerts || []).length ? <p className="text-sm text-[#6b5a4f]">No active alerts right now.</p> : null}
+          </div>
+        </Card>
+
+        <Card title="Burnout Watchlist">
+          <div className="space-y-3">
+            {criticalEmployees.map((employee) => (
+              <div key={employee.id} className="rounded-[20px] bg-[rgba(184,61,61,0.08)] p-4">
+                <p className="font-semibold">{employee.fullName}</p>
+                <p className="mt-1 text-sm text-[#6b5a4f]">
+                  Risk: {employee.burnoutRisk.level} | Remaining load: {employee.workload?.remainingWeight || 0}
+                </p>
+              </div>
+            ))}
+            {!criticalEmployees.length ? <p className="text-sm text-[#6b5a4f]">No critical burnout signals detected.</p> : null}
+          </div>
+        </Card>
+
+        <Card title="Completion Trend" subtitle="Six-month created vs completed task movement.">
+          <div className="space-y-3">
+            {(board.analytics?.completionTrend || []).map((point) => (
+              <div key={point.key}>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="font-medium">{point.label}</span>
+                  <span className="text-[#6b5a4f]">C:{point.completed} / N:{point.created}</span>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-[rgba(58,44,30,0.08)]">
+                  <div className="h-full rounded-full bg-[#2f6b5f]" style={{ width: `${Math.min(100, point.completed * 20)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
-      {showQueries && (
-        <ModalShell title="Employee Queries" onClose={() => setShowQueries(false)}>
-          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <MiniStat label="Unread Notifications" value={unreadCount} />
-            <MiniStat label="Open Questions" value={openQueryCount} />
-          </div>
-
-          {isQueriesLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
+      <Card title="Team Radar" subtitle="Skills, risk, workload, and performance in one view.">
+        <div className="grid gap-4 xl:grid-cols-2">
+          {board.team.map((employee) => (
+            <div key={employee.id} className="rounded-[24px] border border-[rgba(58,44,30,0.08)] bg-white/60 p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold">{employee.fullName}</h3>
+                  <p className="text-sm text-[#6b5a4f]">{employee.email}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${employee.burnoutRisk?.level === 'Critical' ? 'bg-[rgba(184,61,61,0.12)] text-[#9c3232]' : employee.burnoutRisk?.level === 'Watchlist' ? 'bg-[rgba(196,106,47,0.12)] text-[#8e3f16]' : 'bg-[rgba(47,107,95,0.12)] text-[#25564d]'}`}>
+                  {employee.burnoutRisk?.level || 'Safe'}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <Mini label="Remaining Load" value={employee.workload?.remainingWeight || 0} />
+                <Mini label="Performance" value={employee.performance?.score || 0} />
+                <Mini label="Overdue" value={employee.workload?.overdue || 0} />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {(employee.skills || []).map((skill) => (
+                  <span key={skill} className="rounded-full bg-[rgba(47,107,95,0.1)] px-3 py-1 text-xs text-[#25564d]">{skill}</span>
+                ))}
+              </div>
             </div>
-          ) : queries.length === 0 ? (
-            <p className="py-12 text-center text-sm text-gray-500">No employee questions yet.</p>
-          ) : (
+          ))}
+        </div>
+      </Card>
+
+      {showQueries ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(32,21,15,0.32)] p-4 backdrop-blur-sm">
+          <Card className="max-h-[90vh] w-full max-w-5xl overflow-y-auto" title="Employee Mailbox" action={<Button variant="ghost" onClick={() => setShowQueries(false)}>Close</Button>}>
             <div className="space-y-4">
               {queries.map((query) => (
-                <div key={query.id} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-gray-900">{query.subject}</p>
-                        <StatusBadge status={query.status} />
-                        {!query.isManagerRead && (
-                          <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                            New
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {`${query.employee?.fullName || 'Employee'} | ${query.employee?.email || 'No email'}`}
-                      </p>
-                      <p className="text-xs text-gray-500">{new Date(query.createdAt).toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  <p className="mt-3 text-sm text-gray-700">{query.message}</p>
-
+                <div key={query.id} className="rounded-[22px] border border-[rgba(58,44,30,0.08)] bg-white/65 p-4">
+                  <p className="font-semibold">{query.subject}</p>
+                  <p className="mt-1 text-sm text-[#6b5a4f]">{query.employee?.fullName}</p>
+                  <p className="mt-3 text-sm">{query.message}</p>
                   {query.reply ? (
-                    <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Your Reply</p>
-                      <p className="mt-1 text-sm text-blue-900">{query.reply}</p>
-                    </div>
+                    <div className="mt-4 rounded-[18px] bg-[rgba(47,107,95,0.08)] p-3 text-sm text-[#25564d]">{query.reply}</div>
                   ) : (
                     <div className="mt-4 space-y-3">
                       <textarea
                         value={replyDrafts[query.id] || ''}
                         onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [query.id]: e.target.value }))}
-                        className="min-h-[100px] w-full rounded-lg border border-gray-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={`Reply to ${query.employee?.fullName || 'employee'}...`}
+                        className="min-h-[110px] w-full rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 outline-none focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
                       />
-                      <div className="flex justify-end">
-                        <Button
-                          variant="primary"
-                          onClick={() => handleReply(query.id)}
-                          loading={replyingQueryId === query.id}
-                          disabled={replyingQueryId === query.id}
-                        >
-                          Send Reply
-                        </Button>
-                      </div>
+                      <Button onClick={() => reply(query.id)}>Send Reply</Button>
                     </div>
                   )}
                 </div>
               ))}
+              {!queries.length ? <p className="text-sm text-[#6b5a4f]">No employee questions yet.</p> : null}
             </div>
-          )}
-        </ModalShell>
-      )}
+          </Card>
+        </div>
+      ) : null}
     </Layout>
   );
 };
 
-const StatCard = ({ title, value, bgColor }) => (
-  <Card className="relative overflow-hidden">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">{title}</p>
-        <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
-      </div>
-      <div className={`${bgColor} h-12 w-12 rounded-lg`} />
-    </div>
-  </Card>
-);
-
-const MiniStat = ({ label, value }) => (
-  <div className="rounded-lg border border-gray-200 bg-white p-4">
-    <p className="text-sm text-gray-500">{label}</p>
-    <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+const Metric = ({ label, value }) => (
+  <div className="rounded-[22px] bg-[rgba(244,239,231,0.78)] p-4">
+    <p className="text-sm text-[#6b5a4f]">{label}</p>
+    <p className="mt-2 text-3xl font-semibold">{value}</p>
   </div>
 );
 
-const ModalShell = ({ title, children, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-    <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
-      <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-        <button type="button" onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      {children}
-    </div>
+const Mini = ({ label, value }) => (
+  <div className="rounded-[18px] bg-[rgba(244,239,231,0.7)] p-3">
+    <p className="text-xs uppercase tracking-[0.18em] text-[#7d6c60]">{label}</p>
+    <p className="mt-2 text-xl font-semibold">{value}</p>
   </div>
-);
-
-const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-    status === 'Answered' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-  }`}>
-    {status}
-  </span>
 );
 
 export default ManagerDashboard;
