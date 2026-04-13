@@ -3,20 +3,17 @@ import axios from '../api/axiosInstance';
 import Layout from '../components/Layout';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import { toast } from 'react-hot-toast';
 
 const ManagerEmployeesPage = () => {
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [team, setTeam] = useState([]);
-  const [skillDrafts, setSkillDrafts] = useState({});
 
   const load = async () => {
     try {
       const [teamResponse, availableResponse] = await Promise.all([axios.get('/users/team'), axios.get('/users/available')]);
       setTeam(teamResponse.data);
       setAvailableEmployees(availableResponse.data);
-      setSkillDrafts(Object.fromEntries(teamResponse.data.map((employee) => [employee.id, (employee.skills || []).join(', ')])));
     } catch {
       toast.error('Failed to load employees');
     }
@@ -46,18 +43,6 @@ const ManagerEmployeesPage = () => {
     }
   };
 
-  const saveSkills = async (employeeId) => {
-    try {
-      await axios.put(`/users/${employeeId}/skills`, {
-        skills: (skillDrafts[employeeId] || '').split(',').map((item) => item.trim()).filter(Boolean),
-      });
-      toast.success('Skills updated');
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update skills');
-    }
-  };
-
   return (
     <Layout role="manager">
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -78,7 +63,7 @@ const ManagerEmployeesPage = () => {
           </div>
         </Card>
 
-        <Card title="My Team" subtitle="Keep employee skill profiles clean so smart assignment works better.">
+        <Card title="My Team" subtitle="View employee skill profiles while employees manage their own skills.">
           <div className="space-y-5">
             {team.map((employee) => (
               <div key={employee.id} className="rounded-[24px] border border-[rgba(58,44,30,0.08)] bg-white/65 p-5">
@@ -94,15 +79,16 @@ const ManagerEmployeesPage = () => {
                   <Button variant="outline" onClick={() => release(employee.id)}>Release</Button>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto]">
-                  <Input
-                    label="Skills"
-                    value={skillDrafts[employee.id] || ''}
-                    onChange={(e) => setSkillDrafts((prev) => ({ ...prev, [employee.id]: e.target.value }))}
-                    placeholder="forecasting, support, analytics"
-                  />
-                  <div className="flex items-end">
-                    <Button onClick={() => saveSkills(employee.id)}>Save Skills</Button>
+                <div className="mt-5">
+                  <p className="text-sm font-medium text-[#20150f]">Skills</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(employee.skills || []).length ? (employee.skills || []).map((skill) => (
+                      <span key={skill} className="rounded-full bg-[rgba(47,107,95,0.1)] px-3 py-1 text-xs text-[#25564d]">
+                        {skill}
+                      </span>
+                    )) : (
+                      <span className="text-sm text-[#6b5a4f]">No skills added by employee yet.</span>
+                    )}
                   </div>
                 </div>
               </div>

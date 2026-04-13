@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from '../api/axiosInstance';
 import Layout from '../components/Layout';
 import Card from '../components/ui/Card';
@@ -7,160 +7,100 @@ import { toastService, toastMessages } from '../services/toastService';
 
 const EmployeeTasksPage = () => {
   const [tasks, setTasks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
+
+  const fetchTasks = async () => {
+    try {
+      const response = await axios.get('/tasks/my');
+      setTasks(response.data);
+    } catch {
+      toastService.error(toastMessages.loadError);
+    }
+  };
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  const fetchTasks = async () => {
-    setIsLoading(true);
-    try {
-      const res = await axios.get('/tasks/my');
-      setTasks(res.data);
-    } catch (err) {
-      console.error('Failed to fetch tasks:', err);
-      toastService.error(toastMessages.loadError);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const summary = useMemo(() => ({
+    total: tasks.length,
+    inProgress: tasks.filter((task) => task.status === 'In Progress').length,
+    overdue: tasks.filter((task) => task.status === 'Overdue').length,
+  }), [tasks]);
 
-  const updateStatus = async (id, status) => {
-    setUpdatingTaskId(id);
-
+  const updateStatus = async (taskId, status) => {
+    setUpdatingTaskId(taskId);
     try {
-      const res = await axios.put(`/tasks/${id}/status`, { status });
-      setTasks((prev) => prev.map((task) => (task.id === id ? res.data : task)));
+      const response = await axios.put(`/tasks/${taskId}/status`, { status });
+      setTasks((prev) => prev.map((task) => (task.id === taskId ? response.data : task)));
       toastService.success(toastMessages.taskStatusUpdated);
-    } catch (err) {
-      console.error('Failed to update task status:', err);
+    } catch {
       toastService.error(toastMessages.taskError);
     } finally {
       setUpdatingTaskId(null);
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'in progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'overdue':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return 'text-red-600';
-      case 'medium':
-        return 'text-orange-600';
-      case 'low':
-        return 'text-green-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  const columns = [
-    {
-      header: 'Task',
-      accessor: 'title',
-      render: (task) => (
-        <div>
-          <p className="font-medium text-gray-900">{task.title}</p>
-          {task.description && (
-            <p className="mt-1 line-clamp-2 text-sm text-gray-500">{task.description}</p>
-          )}
-        </div>
-      ),
-    },
-    {
-      header: 'Priority',
-      accessor: 'priority',
-      render: (task) => (
-        <span className={`font-medium ${getPriorityColor(task.priority)}`}>
-          {task.priority || 'Medium'}
-        </span>
-      ),
-    },
-    {
-      header: 'Weight',
-      accessor: 'weight',
-      render: (task) => (
-        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
-          {task.weight ?? 1}
-        </span>
-      ),
-    },
-    {
-      header: 'Due Date',
-      accessor: 'deadline',
-      render: (task) => (
-        <span className="text-sm text-gray-600">
-          {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
-        </span>
-      ),
-    },
-    {
-      header: 'Status',
-      accessor: 'status',
-      render: (task) => (
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(task.status)}`}>
-          {task.status}
-        </span>
-      ),
-    },
-    {
-      header: 'Actions',
-      accessor: 'actions',
-      render: (task) => (
-        <select
-          onChange={(e) => updateStatus(task.id, e.target.value)}
-          value={task.status}
-          disabled={updatingTaskId === task.id}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <option value="Pending">Pending</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
-        </select>
-      ),
-    },
-  ];
-
   return (
     <Layout role="employee">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
-          <p className="mt-1 text-sm text-gray-600">View and update the tasks currently assigned to you.</p>
-        </div>
-
-        <Card title="Assigned Tasks" subtitle="This page contains only your active assigned tasks.">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={tasks}
-              emptyMessage="No tasks assigned yet. Check back later for new assignments."
-            />
-          )}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <Card title="My Task Table" subtitle="Compact view to reduce vertical scrolling while keeping all task controls visible.">
+          <Table
+            columns={[
+              {
+                header: 'Task',
+                render: (task) => (
+                  <div>
+                    <p className="font-semibold">{task.title}</p>
+                    <p className="mt-1 text-xs text-[#6b5a4f]">{task.description}</p>
+                  </div>
+                ),
+              },
+              { header: 'Priority', accessor: 'priority' },
+              { header: 'Weight', accessor: 'weight' },
+              {
+                header: 'Deadline',
+                render: (task) => (task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'),
+              },
+              { header: 'Status', accessor: 'status' },
+              {
+                header: 'Action',
+                render: (task) => (
+                  <select
+                    value={task.status}
+                    disabled={updatingTaskId === task.id}
+                    onChange={(e) => updateStatus(task.id, e.target.value)}
+                    className="rounded-xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-3 py-2 text-sm outline-none focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                ),
+              },
+            ]}
+            data={tasks}
+            emptyMessage="No tasks assigned yet."
+          />
         </Card>
+
+        <aside className="space-y-6 xl:sticky xl:top-28 xl:self-start">
+          <Card title="Task Summary">
+            <Summary label="Total Tasks" value={summary.total} />
+            <Summary label="In Progress" value={summary.inProgress} />
+            <Summary label="Overdue" value={summary.overdue} />
+          </Card>
+        </aside>
       </div>
     </Layout>
   );
 };
+
+const Summary = ({ label, value }) => (
+  <div className="mb-3 rounded-[18px] bg-[rgba(244,239,231,0.78)] p-4">
+    <p className="text-sm text-[#6b5a4f]">{label}</p>
+    <p className="mt-2 text-2xl font-semibold">{value}</p>
+  </div>
+);
 
 export default EmployeeTasksPage;

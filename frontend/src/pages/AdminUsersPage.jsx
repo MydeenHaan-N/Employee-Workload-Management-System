@@ -49,7 +49,6 @@ const AdminUsersPage = () => {
       const payload = {
         fullName: form.fullName,
         role: form.role,
-        skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
       };
 
       if (selectedUser) {
@@ -57,6 +56,7 @@ const AdminUsersPage = () => {
       } else {
         await axios.post('/users', {
           ...payload,
+          skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
           email: form.email,
           password: form.password,
         });
@@ -140,15 +140,17 @@ const AdminUsersPage = () => {
               <Input label="Role" as="select" value={form.role} onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}>
                 {roles.map((role) => <option key={role.id} value={role.name}>{role.name}</option>)}
               </Input>
-              <div className="md:col-span-2">
-                <Input
-                  label="Skills"
-                  value={form.skills}
-                  onChange={(e) => setForm((prev) => ({ ...prev, skills: e.target.value }))}
-                  placeholder="react, reporting, auditing"
-                  helpText="Comma-separated skills for smarter task matching."
-                />
-              </div>
+              {!selectedUser ? (
+                <div className="md:col-span-2">
+                  <Input
+                    label="Skills"
+                    value={form.skills}
+                    onChange={(e) => setForm((prev) => ({ ...prev, skills: e.target.value }))}
+                    placeholder="react, reporting, auditing"
+                    helpText="Optional starting skills. Employees manage updates themselves after account creation."
+                  />
+                </div>
+              ) : null}
               <div className="md:col-span-2 flex justify-end gap-3">
                 <Button type="button" variant="ghost" onClick={() => setShowModal(false)}>Cancel</Button>
                 <Button type="submit">{selectedUser ? 'Update User' : 'Create User'}</Button>

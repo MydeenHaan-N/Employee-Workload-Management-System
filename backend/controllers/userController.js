@@ -56,7 +56,7 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { fullName, role, skills } = req.body;
+  const { fullName, role } = req.body;
   const requesterRole = req.user.roleName;
 
   try {
@@ -91,7 +91,6 @@ const updateUser = async (req, res) => {
       fullName: fullName ?? user.fullName,
       roleId: nextRoleId,
       managerId: nextManagerId,
-      skills: skills === undefined ? user.skills : serializeSkills(skills),
     });
     res.json({
       ...user.toJSON(),
@@ -113,13 +112,9 @@ const updateUserSkills = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const isAdmin = req.user.roleName === 'admin';
     const isSelf = req.user.id === user.id;
-    const isManagingEmployee = req.user.roleName === 'manager'
-      && user.managerId === req.user.id
-      && user.roleDetails?.name === 'employee';
 
-    if (!isAdmin && !isSelf && !isManagingEmployee) {
+    if (!isSelf) {
       return res.status(403).json({ message: 'You are not allowed to update these skills' });
     }
 

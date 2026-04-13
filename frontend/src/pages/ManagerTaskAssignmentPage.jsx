@@ -44,67 +44,86 @@ const ManagerTaskAssignmentPage = () => {
 
   return (
     <Layout role="manager">
-      <Card
-        title="Assignment Lab"
-        subtitle="Compare manual assignment against smart recommendation, then dispatch tasks in one click."
-        action={<Button onClick={autoAssignAll}>Smart Assign Backlog</Button>}
-      >
-        <div className="space-y-5">
-          {board.unassignedTasks.map((task) => (
-            <div key={task.id} className="rounded-[26px] border border-[rgba(58,44,30,0.08)] bg-white/60 p-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="max-w-2xl">
-                  <p className="text-xs uppercase tracking-[0.18em] text-[#8e3f16]">{task.priority} priority</p>
-                  <h3 className="mt-2 text-xl font-semibold">{task.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-[#6b5a4f]">{task.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {(task.requiredSkills || []).map((skill) => (
-                      <span key={skill} className="rounded-full bg-[rgba(47,107,95,0.1)] px-3 py-1 text-xs text-[#25564d]">{skill}</span>
-                    ))}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <Card
+          title="Assignment Lab"
+          subtitle="Compare manual assignment against smart recommendation, then dispatch tasks in one click."
+          action={<Button onClick={autoAssignAll}>Smart Assign Backlog</Button>}
+        >
+          <div className="space-y-5">
+            {board.unassignedTasks.map((task) => (
+              <div key={task.id} className="rounded-[26px] border border-[rgba(58,44,30,0.08)] bg-white/60 p-5">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="max-w-2xl">
+                    <p className="text-xs uppercase tracking-[0.18em] text-[#8e3f16]">{task.priority} priority</p>
+                    <h3 className="mt-2 text-xl font-semibold">{task.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#6b5a4f]">{task.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {(task.requiredSkills || []).map((skill) => (
+                        <span key={skill} className="rounded-full bg-[rgba(47,107,95,0.1)] px-3 py-1 text-xs text-[#25564d]">{skill}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid min-w-[320px] gap-3">
-                  <select
-                    value={selectedEmployees[task.id] || ''}
-                    onChange={(e) => setSelectedEmployees((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                    className="rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 text-sm outline-none focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
-                  >
-                    <option value="">Choose employee manually</option>
-                    {board.team.map((employee) => (
-                      <option key={employee.id} value={employee.id}>{employee.fullName}</option>
-                    ))}
-                  </select>
-                  <div className="flex gap-3">
-                    <Button variant="outline" className="flex-1" onClick={() => assign(task.id, selectedEmployees[task.id])}>
-                      Assign Manually
-                    </Button>
-                    <Button className="flex-1" onClick={() => assign(task.id)}>
-                      Smart Assign
-                    </Button>
-                  </div>
-                  <div className="rounded-[20px] bg-[rgba(244,239,231,0.8)] p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-[#8e3f16]">Best Match</p>
-                    {task.recommendations?.[0] ? (
-                      <>
-                        <p className="mt-2 font-semibold">{task.recommendations[0].fullName}</p>
-                        <p className="text-sm text-[#6b5a4f]">
-                          Score {task.recommendations[0].score} | Projected risk {task.recommendations[0].projectedRisk}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="mt-2 text-sm text-[#6b5a4f]">No recommendation available.</p>
-                    )}
+                  <div className="grid min-w-[290px] gap-3">
+                    <select
+                      value={selectedEmployees[task.id] || ''}
+                      onChange={(e) => setSelectedEmployees((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                      className="rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 text-sm outline-none focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
+                    >
+                      <option value="">Choose employee manually</option>
+                      {board.team.map((employee) => (
+                        <option key={employee.id} value={employee.id}>{employee.fullName}</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-3">
+                      <Button variant="outline" className="flex-1" onClick={() => assign(task.id, selectedEmployees[task.id])}>
+                        Assign Manually
+                      </Button>
+                      <Button className="flex-1" onClick={() => assign(task.id)}>
+                        Smart Assign
+                      </Button>
+                    </div>
+                    <div className="rounded-[20px] bg-[rgba(244,239,231,0.8)] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#8e3f16]">Best Match</p>
+                      {task.recommendations?.[0] ? (
+                        <>
+                          <p className="mt-2 font-semibold">{task.recommendations[0].fullName}</p>
+                          <p className="text-sm text-[#6b5a4f]">
+                            Score {task.recommendations[0].score} | Projected risk {task.recommendations[0].projectedRisk}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-2 text-sm text-[#6b5a4f]">No recommendation available.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+            {!board.unassignedTasks.length ? <p className="text-sm text-[#6b5a4f]">No backlog tasks waiting for assignment.</p> : null}
+          </div>
+        </Card>
+
+        <aside className="space-y-6 xl:sticky xl:top-28 xl:self-start">
+          <Card title="Assignment Summary">
+            <div className="space-y-3">
+              <Summary label="Backlog Tasks" value={board.unassignedTasks.length} />
+              <Summary label="Available Assignees" value={board.team.length} />
+              <Summary label="Recommended Matches" value={board.unassignedTasks.filter((task) => task.recommendations?.length).length} />
             </div>
-          ))}
-          {!board.unassignedTasks.length ? <p className="text-sm text-[#6b5a4f]">No backlog tasks waiting for assignment.</p> : null}
-        </div>
-      </Card>
+          </Card>
+        </aside>
+      </div>
     </Layout>
   );
 };
+
+const Summary = ({ label, value }) => (
+  <div className="rounded-[18px] bg-[rgba(244,239,231,0.78)] p-4">
+    <p className="text-sm text-[#6b5a4f]">{label}</p>
+    <p className="mt-2 text-2xl font-semibold">{value}</p>
+  </div>
+);
 
 export default ManagerTaskAssignmentPage;

@@ -84,7 +84,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
                 className="w-full rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 outline-none transition focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
-                placeholder="admin@gmail.com"
+                placeholder="email"
                 required
               />
             </div>
@@ -97,7 +97,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
                 className="w-full rounded-2xl border border-[rgba(58,44,30,0.14)] bg-white/80 px-4 py-3 outline-none transition focus:border-[#c46a2f] focus:ring-4 focus:ring-[rgba(196,106,47,0.14)]"
-                placeholder="123456"
+                placeholder="password"
                 required
               />
             </div>
@@ -116,15 +116,6 @@ const Login = () => {
               {isLoading ? 'Signing in...' : 'Enter Workspace'}
             </button>
           </form>
-
-          <div className="mt-8 rounded-[24px] border border-[rgba(58,44,30,0.1)] bg-white/60 p-4 text-sm text-[#6b5a4f]">
-            Demo accounts:
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              <span>`admin@gmail.com`</span>
-              <span>`haan@gmail.com`</span>
-              <span>`mydeen@gamil.com`</span>
-            </div>
-          </div>
         </section>
       </div>
     </div>
